@@ -7,7 +7,7 @@ import { getModel } from './ai';
 import * as db from './db';
 import { placeOrder, refundOrderByCode, markReadyByCode, createCustomInvoice } from './orders';
 import { confirmationProblem } from './confirm';
-import { resolvePickup } from './pickup';
+import { resolvePickup, pickupProblem } from './pickup';
 import { createQuoteOnce } from './quotes';
 
 export class AgentSetupError extends Error {}
@@ -58,6 +58,7 @@ Rules you must always follow:
 - If the customer wants something custom or not on the menu (e.g. a special-occasion cake, a bespoke piece), NEVER invent or estimate a price. Collect their name, their email if they are willing, and a clear description, then call request_custom_quote. Tell them the owner will review it and send a PayPal invoice with the price.
 - Never state a price, subtotal or total unless it came from a tool result. Do not do price maths yourself. Call get_menu to see unit prices, and use the total returned by create_order.
 - Ask for the customer's name before placing an order.
+- Pickup dates must be today or later and at most 90 days ahead. If create_order refuses a date, tell the customer why and ask for another day; never place the order with a different date on your own.
 ${todayLine()}
 - Before calling create_order: summarise the cart (items, quantities, any notes, pickup date if given) and ask the customer to confirm. Only call create_order after the customer has clearly said yes to that summary in their latest message. Set customerConfirmed to true only in that case. If they change anything, re-summarise and ask again.
 - After create_order succeeds, tell the customer their order code and that they can pay securely with the PayPal button shown below the chat. Do not claim it is paid until they pay.
@@ -99,8 +100,11 @@ export async function runCustomerAgent(messages: ChatMessage[], shop: Shop): Pro
         execute: async (input) => {
           if (!input.customerConfirmed) return { ok: false, error: 'Not placed: summarise the cart and get an explicit yes from the customer first.' };
           if (created) return { ok: false, error: `An order was already created in this conversation turn (${created.shortCode}).` };
+          const pickupDate = input.pickupDate ? resolvePickup(input.pickupDate) : undefined;
+          const dateProblem = pickupProblem(pickupDate);
+          if (dateProblem) return { ok: false, error: `Not placed. ${dateProblem}` };
           try {
-            const order = await placeOrder(shop, { ...input, pickupDate: input.pickupDate ? resolvePickup(input.pickupDate) : undefined });
+            const order = await placeOrder(shop, { ...input, pickupDate });
             created = order;
             return { ok: true, shortCode: order.shortCode, lines: order.lines.map((l) => ({ name: l.name, qty: l.qty, lineTotalUsd: l.lineTotal })), totalUsd: order.total, pickupDate: order.pickupDate ?? null, message: 'Order created. Customer pays with the PayPal button below the chat.' };
           } catch (e) {

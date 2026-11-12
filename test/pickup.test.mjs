@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { resolvePickup } from '../lib/pickup.ts';
+import { resolvePickup, pickupProblem } from '../lib/pickup.ts';
 
 const now = new Date('2026-11-12T10:00:00+05:30'); // Thursday
 
@@ -44,4 +44,15 @@ test('anything else is returned trimmed and capped, never rejected', () => {
   assert.equal(resolvePickup('2026-13-45', now), '2026-13-45');
   assert.equal(resolvePickup('x'.repeat(100), now).length, 60);
   assert.equal(resolvePickup('', now), '');
+});
+
+test('past and far-future pickup dates are refused, valid ones pass', () => {
+  assert.match(pickupProblem('2026-11-11', now), /in the past/);
+  assert.match(pickupProblem(resolvePickup('yesterday', now), now), /in the past/);
+  assert.match(pickupProblem(resolvePickup('5 Nov 2025', now), now), /in the past/);
+  assert.match(pickupProblem('2027-06-01', now), /more than 90 days/);
+  assert.equal(pickupProblem('2026-11-12', now), null);
+  assert.equal(pickupProblem(resolvePickup('Saturday', now), now), null);
+  assert.equal(pickupProblem('after Diwali', now), null);
+  assert.equal(pickupProblem(undefined, now), null);
 });

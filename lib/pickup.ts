@@ -42,6 +42,7 @@ export function resolvePickup(text: string, now: Date = new Date()): string {
   const wdToday = new Date(Date.UTC(t.y, t.m - 1, t.d)).getUTCDay();
 
   if (s === 'today') return fmt(t.y, t.m, t.d);
+  if (s === 'yesterday') return addDays(t.y, t.m, t.d, -1);
   if (s === 'tomorrow' || s === 'tmrw') return addDays(t.y, t.m, t.d, 1);
   if (s === 'day after tomorrow' || s === 'the day after tomorrow') return addDays(t.y, t.m, t.d, 2);
 
@@ -67,4 +68,23 @@ export function resolvePickup(text: string, now: Date = new Date()): string {
     return validDate(y, m, parts.d) ? fmt(y, m, parts.d) : original;
   }
   return original;
+}
+
+/** Furthest ahead an order may be scheduled. */
+export const MAX_DAYS_AHEAD = 90;
+
+/**
+ * Server-side rule for a resolved pickup value. Returns a plain-English problem, or null when acceptable.
+ * Only calendar dates are judged; free text that could not be resolved is left for the owner to read.
+ */
+export function pickupProblem(resolved: string | undefined, now: Date = new Date()): string | null {
+  if (!resolved) return null;
+  const iso = resolved.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!iso) return null;
+  const t = todayIst(now);
+  const today = fmt(t.y, t.m, t.d);
+  if (resolved < today) return `The pickup date ${resolved} is in the past (today is ${today}). Ask the customer for a date from today onwards.`;
+  const latest = addDays(t.y, t.m, t.d, MAX_DAYS_AHEAD);
+  if (resolved > latest) return `The pickup date ${resolved} is more than ${MAX_DAYS_AHEAD} days away. Ask the customer for a date on or before ${latest}.`;
+  return null;
 }
