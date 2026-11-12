@@ -45,6 +45,7 @@ export function Storefront({ slug }: { slug?: string }) {
     fetch(slug ? `/api/menu?shop=${encodeURIComponent(slug)}` : "/api/menu")
       .then(async (r) => {
         if (r.status === 404) {
+          await r.text().catch(() => ""); // drain the body so the request completes
           setNotFound(true);
           throw new Error("");
         }

@@ -117,7 +117,7 @@ function DashboardInner({ slug, pin, onLock }: { slug: string; pin: string; onLo
                   <p className="min-w-0 break-words font-medium text-slate-900">{q.customerName}</p>
                   <span className="shrink-0 text-xs text-slate-500">{shortDate(q.createdAt)}</span>
                 </div>
-                <p className="break-all text-xs text-slate-500">{q.customerEmail || "No email yet — ask the customer for one before invoicing"}</p>
+                <p className={`text-xs text-slate-500 ${q.customerEmail ? "break-all" : ""}`}>{q.customerEmail || "No email yet — ask the customer for one before invoicing"}</p>
                 <p className="mt-1 break-words text-slate-700">{q.description}</p>
               </li>
             ))}
@@ -179,11 +179,11 @@ function DashboardInner({ slug, pin, onLock }: { slug: string; pin: string; onLo
                       <tr key={o.id} className="align-top hover:bg-slate-50/60">
                         <td className="whitespace-nowrap py-3 pl-5 pr-4 font-mono text-xs font-semibold text-navy-900">{o.shortCode}</td>
                         <td className="px-4 py-3 text-slate-800">{o.customerName}</td>
-                        <td className="max-w-[16rem] px-4 py-3 text-slate-600">{itemsSummary(o)}</td>
+                        <td className="min-w-[11rem] max-w-[16rem] px-4 py-3 text-slate-600">{itemsSummary(o)}</td>
                         <td className="whitespace-nowrap px-4 py-3 font-medium tabular-nums text-slate-900">{money(o.total)}</td>
                         <td className="whitespace-nowrap px-4 py-3 text-slate-600">{shortDate(o.pickupDate)}</td>
                         <td className="px-4 py-3"><StatusBadge order={o} /></td>
-                        <td className="whitespace-nowrap py-3 pl-4 pr-5 text-slate-500">{shortDate(o.createdAt)}</td>
+                        <td className="py-3 pl-4 pr-5 text-slate-500">{shortDate(o.createdAt)}</td>
                       </tr>
                     ))}
                   </tbody>
