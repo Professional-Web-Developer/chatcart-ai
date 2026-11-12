@@ -22,6 +22,11 @@ type NavLink = { href: string; label: string; short?: string; match: (p: string)
 function linksFor(pathname: string): NavLink[] {
   const m = pathname.match(/^\/(?:s|dashboard)\/([a-z0-9-]+)/);
   const slug = m ? m[1] : null;
+  // A customer who opens a seller's shop link sees only that shop, plus a quiet owner sign-in link.
+  // Seller tools (dashboard, create a shop) stay on the demo home page and the owner pages.
+  if (slug && pathname.startsWith("/s/")) {
+    return [{ href: `/dashboard/${slug}`, label: "Owner sign-in", short: "Owner", match: () => false }];
+  }
   return [
     { href: slug ? `/s/${slug}` : "/", label: "Storefront", short: "Shop", match: (p) => p === "/" || p.startsWith("/s/") },
     { href: slug ? `/dashboard/${slug}` : "/dashboard", label: "Owner dashboard", short: "Dashboard", match: (p) => p.startsWith("/dashboard") },
