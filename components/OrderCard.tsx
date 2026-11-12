@@ -161,7 +161,7 @@ function PayButton({
           }
           onPaid(data.order?.fulfilment === "READY");
         } catch (e) {
-          onProblem("error", `${e instanceof Error ? e.message : "We couldn't confirm the payment."} You have not been charged twice — try the button again.`);
+          onProblem("error", `${e instanceof Error ? e.message : "We couldn't confirm the payment."} Please try the button again; if PayPal already took the payment, the order will show as paid.`);
         }
       }}
       onCancel={() => onProblem("warn", "Payment cancelled. Your order is still saved — pay whenever you're ready.")}

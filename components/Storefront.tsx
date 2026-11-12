@@ -20,7 +20,7 @@ function startersFor(items: { name: string }[]): string[] {
   const second = items[1]?.name;
   if (!first) return GENERIC_STARTERS;
   return [
-    `I'd like 2 x ${first} for Saturday`,
+    `I'd like to order ${first}`,
     second ? `How much is ${second}?` : "What do you offer?",
     "Can I get something custom made?",
   ];

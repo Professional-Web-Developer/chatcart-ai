@@ -333,7 +333,17 @@ function DashboardInner({ slug, pin, onLock }: { slug: string; pin: string; onLo
   );
 
   const recent = useMemo(() => [...(orders ?? [])].sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt))).slice(0, 5), [orders]);
-  const name = shopTitle(slug);
+  // Real shop name from the shop record; the slug-derived title is only a placeholder while it loads.
+  const [realName, setRealName] = useState<string | null>(null);
+  useEffect(() => {
+    let alive = true;
+    fetch(`/api/menu?shop=${encodeURIComponent(slug)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (alive && d?.shop?.name) setRealName(String(d.shop.name)); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [slug]);
+  const name = realName ?? shopTitle(slug);
   const storefront = slug === DEMO_SLUG ? "/" : `/s/${slug}`;
   const active = NAV.find((n) => n.id === section)!;
 
@@ -423,7 +433,7 @@ function DashboardInner({ slug, pin, onLock }: { slug: string; pin: string; onLo
           <div className="mb-6">
             <h1 className="text-2xl font-bold tracking-tight text-navy-900">{active.title}</h1>
             <p className="text-sm text-slate-600">
-              Live orders for {slug === DEMO_SLUG ? "Anu's Home Bakery" : <span className="font-mono text-xs">{slug}</span>}. Updates every few seconds.
+              Live orders for {name}. Updates every few seconds.
             </p>
           </div>
 

@@ -36,7 +36,7 @@ export function MenuList({ menu, onRetry }: { menu: MenuState; onRetry: () => vo
         )}
         {menu.status === "error" && (
           <div className="pt-4 text-sm text-slate-600">
-            <p>We couldn&apos;t load the menu. {menu.message}</p>
+            <p>We couldn&apos;t load the menu. Please check your connection and try again.</p>
             <button type="button" onClick={onRetry} className="mt-2 font-semibold text-brand hover:underline">
               Try again
             </button>
