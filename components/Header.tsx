@@ -15,11 +15,19 @@ export function Logo({ className = "h-8 w-8 sm:h-9 sm:w-9" }: { className?: stri
   );
 }
 
-const links: { href: string; label: string; short?: string }[] = [
-  { href: "/", label: "Storefront", short: "Shop" },
-  { href: "/dashboard", label: "Owner dashboard", short: "Dashboard" },
-  { href: "/new", label: "Create a shop", short: "Create" },
-];
+type NavLink = { href: string; label: string; short?: string; match: (p: string) => boolean };
+
+// The nav follows the shop you are looking at: on /s/<slug> or /dashboard/<slug>, "Storefront" and
+// "Owner dashboard" stay inside that shop instead of jumping to the demo shop.
+function linksFor(pathname: string): NavLink[] {
+  const m = pathname.match(/^\/(?:s|dashboard)\/([a-z0-9-]+)/);
+  const slug = m ? m[1] : null;
+  return [
+    { href: slug ? `/s/${slug}` : "/", label: "Storefront", short: "Shop", match: (p) => p === "/" || p.startsWith("/s/") },
+    { href: slug ? `/dashboard/${slug}` : "/dashboard", label: "Owner dashboard", short: "Dashboard", match: (p) => p.startsWith("/dashboard") },
+    { href: "/new", label: "Create a shop", short: "Create", match: (p) => p.startsWith("/new") },
+  ];
+}
 
 export function Header() {
   const pathname = usePathname();
@@ -33,11 +41,11 @@ export function Header() {
           </span>
         </Link>
         <nav aria-label="Main" className="flex items-center gap-0.5 whitespace-nowrap rounded-full bg-white/10 p-1 sm:gap-1">
-          {links.map((l) => {
-            const active = l.href === "/" ? pathname === "/" || pathname.startsWith("/s/") : pathname.startsWith(l.href);
+          {linksFor(pathname).map((l) => {
+            const active = l.match(pathname);
             return (
               <Link
-                key={l.href}
+                key={l.label}
                 href={l.href}
                 aria-current={active ? "page" : undefined}
                 className={`rounded-full px-2.5 py-1.5 text-[13px] font-medium transition-colors sm:px-4 sm:text-sm ${
