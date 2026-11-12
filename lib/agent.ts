@@ -8,6 +8,7 @@ import * as db from './db';
 import { placeOrder, refundOrderByCode, markReadyByCode, createCustomInvoice } from './orders';
 import { confirmationProblem } from './confirm';
 import { resolvePickup } from './pickup';
+import { createQuoteOnce } from './quotes';
 
 export class AgentSetupError extends Error {}
 
@@ -126,7 +127,7 @@ export async function runCustomerAgent(messages: ChatMessage[], shop: Shop): Pro
         execute: async (input) => {
           if (quoted) return { ok: false, error: 'A quote request was already recorded this turn.' };
           try {
-            await db.createQuote({
+            await createQuoteOnce({
               id: randomUUID(), shopSlug: shop.slug, customerName: input.customerName.trim().slice(0, 80),
               customerEmail: input.customerEmail?.trim().slice(0, 200) || undefined,
               description: input.description.trim().slice(0, 1000), status: 'PENDING', createdAt: new Date().toISOString(),
