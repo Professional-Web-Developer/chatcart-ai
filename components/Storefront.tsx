@@ -12,11 +12,19 @@ import type { OrderX } from "./types";
 
 const CLIENT_ID = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
 
-const STARTERS = [
-  "2 chocolate cakes for Saturday, one eggless",
-  "What do you have for a birthday party?",
-  "Do you have anything vegan?",
-];
+// Starter prompts are built from the shop's own menu, so a tailor never sees cake examples.
+const GENERIC_STARTERS = ["What do you offer?", "What do you recommend?", "Can I get something custom made?"];
+
+function startersFor(items: { name: string }[]): string[] {
+  const first = items[0]?.name;
+  const second = items[1]?.name;
+  if (!first) return GENERIC_STARTERS;
+  return [
+    `I'd like 2 x ${first} for Saturday`,
+    second ? `How much is ${second}?` : "What do you offer?",
+    "Can I get something custom made?",
+  ];
+}
 
 function BakeryIcon() {
   return (
@@ -36,10 +44,11 @@ function PayPalWrap({ children }: { children: ReactNode }) {
 }
 
 export function Storefront({ slug }: { slug?: string }) {
-  const [shop, setShop] = useState<{ name: string; tagline: string }>({ name: "Anu's Home Bakery", tagline: "Fresh, small-batch bakes — order right here in chat." });
+  const [shop, setShop] = useState<{ name: string; tagline: string }>(slug ? { name: "", tagline: "" } : { name: "Anu's Home Bakery", tagline: "Fresh, small-batch bakes — order right here in chat." });
   const [menu, setMenu] = useState<MenuState>({ status: "loading" });
   const [notFound, setNotFound] = useState(false);
   const chatBody = useMemo(() => (slug ? { shop: slug } : undefined), [slug]);
+  const starters = useMemo(() => startersFor(menu.status === "ready" ? menu.items : []), [menu]);
 
   const fetchMenu = useCallback(() => {
     fetch(slug ? `/api/menu?shop=${encodeURIComponent(slug)}` : "/api/menu")
@@ -102,11 +111,11 @@ export function Storefront({ slug }: { slug?: string }) {
           <div className="order-1 lg:sticky lg:top-20 lg:order-2">
             <ChatPanel
               endpoint="/api/chat"
-              title={`Chat with ${shop.name}`}
+              title={`Chat with ${shop.name || "us"}`}
               subtitle="Our AI assistant takes your order — you confirm and pay"
               avatar={<BakeryIcon />}
-              greeting={`Hi! Welcome to ${shop.name}. Tell me what you'd like and when you need it, and I'll put your order together.`}
-              starters={STARTERS}
+              greeting={`Hi! Welcome to ${shop.name || "our shop"}. Tell me what you'd like and when you need it, and I'll put your order together.`}
+              starters={starters}
               placeholder="Type your order…"
               body={chatBody}
               className="h-[34rem] lg:h-[calc(100vh-7.5rem)] lg:max-h-[46rem] lg:min-h-[32rem]"
