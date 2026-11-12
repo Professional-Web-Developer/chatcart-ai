@@ -188,6 +188,8 @@ Limits:
 **The PayPal window says "Things don't appear to be working at the moment".**
 PayPal does not support payments between two Indian accounts, and the sandbox follows the same rule. A default Indian sandbox buyer cannot pay a default Indian sandbox seller. Pay with a sandbox **Personal** account whose country is **United States** (developer dashboard: Sandbox Accounts, Create account, Personal, United States). If that still fails, create a **United States Business** sandbox account, create the app under it, and use that app's Client ID and Secret in the server settings. The exact dashboard labels may differ slightly. See [SETUP](SETUP.md#2-sandbox-accounts-and-the-country-rule).
 
+**If the same error comes back when you click the PayPal button again.** PayPal's window remembers the last sandbox buyer you logged in with, so it retries the same account and fails the same way. Log out at <https://sandbox.paypal.com> (or open the site in a private/incognito window), place a **new** order in the chat, and log in with the United States sandbox buyer. If the window opens already logged in as the wrong account, use the "Not you?" or "Change" link near the name to switch.
+
 **A "Setup needed" banner is shown.**
 The server has no PayPal keys, or no AI key, or both. The banner says which one is missing. The owner of the deployment must set the variables listed in [SETUP](SETUP.md). Open `/api/health` to see what is configured.
 
