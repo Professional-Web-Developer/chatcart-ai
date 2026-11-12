@@ -4,7 +4,7 @@
 
 Built for the PayPal AI Hackathon on Devpost.
 
-- Live demo: `<LIVE_DEMO_URL — to be added>`
+- Live demo: https://chatcart-ai-alpha.vercel.app
 - Demo video: `<DEMO_VIDEO_URL — to be added>`
 - Licence: [MIT](LICENSE)
 
@@ -102,10 +102,11 @@ flowchart LR
 ## Tech stack
 
 - Next.js 16 (App Router, route handlers), React 19, TypeScript, Tailwind CSS 4
-- Vercel AI SDK (`ai` v7) with `@ai-sdk/google`, `@ai-sdk/anthropic`, `@ai-sdk/openai`
+- Vercel AI SDK (`ai` v7) with `@ai-sdk/google`, `@ai-sdk/groq`, `@ai-sdk/anthropic`, `@ai-sdk/openai` (the live demo runs on Groq)
 - Zod 4 for tool and request schemas
 - PayPal REST APIs (sandbox) and `@paypal/react-paypal-js`
-- Postgres via `pg` (optional); in-memory store when no database is configured
+- Postgres via `pg` (the live demo uses Neon Postgres); in-memory store when no database is configured
+- Deployed on Vercel
 
 ## Quick start
 

@@ -1,6 +1,6 @@
 # Devpost submission text (ready to paste)
 
-Replace the two placeholders in angle brackets before submitting.
+Replace the video placeholder before submitting.
 
 ## Project name
 
@@ -29,9 +29,9 @@ ChatCart AI is a sales agent for small chat-based sellers. The demo shop is "Anu
 ## How we built it
 
 - Next.js 16 (App Router), React 19, TypeScript and Tailwind CSS 4.
-- Vercel AI SDK v7. The customer agent has four tools (`get_menu`, `create_order`, `get_order_status`, `request_custom_quote`). The owner agent has six (`list_orders`, `sales_summary`, `list_quote_requests`, `mark_ready`, `refund_order`, `create_custom_invoice`). The model provider is chosen from whichever key is set: Gemini, Claude or OpenAI.
+- Vercel AI SDK v7. The customer agent has four tools (`get_menu`, `create_order`, `get_order_status`, `request_custom_quote`). The owner agent has six (`list_orders`, `sales_summary`, `list_quote_requests`, `mark_ready`, `refund_order`, `create_custom_invoice`). The model provider is chosen from whichever key is set: Gemini, Groq, Claude or OpenAI (the live demo runs on Groq).
 - PayPal REST APIs in the sandbox: OAuth, Orders v2 (create, get, capture), Payments v2 (refund), Invoicing v2 (create, send), and webhook signature verification. The buyer pays with the PayPal JS SDK buttons inside the chat.
-- Postgres for storage, with an in-memory fallback so the project runs with no setup.
+- Neon Postgres for storage, deployed on Vercel, with an in-memory fallback so the project runs with no setup.
 
 The main design rule is that the AI never touches money directly. The model can only pass item ids and quantities. The server computes prices in integer cents from the menu, creates the PayPal order, and before capture it re-reads the order from PayPal to check that the id, currency and amount match what it stored. Refunds and invoices need a `confirmed` flag, and the server also checks that an earlier assistant message exists, so the model cannot ask and confirm in the same turn.
 
@@ -73,7 +73,7 @@ paypal, paypal-orders-api, paypal-payments-api, paypal-invoicing-api, paypal-web
 
 ## Links
 
-- Try it out: `<LIVE_DEMO_URL — to be added>`
+- Try it out: https://chatcart-ai-alpha.vercel.app
 - GitHub repository: `<REPO_URL — to be added>` (public, MIT licence)
 - Video demo: `<DEMO_VIDEO_URL — to be added>`
 
@@ -81,11 +81,11 @@ paypal, paypal-orders-api, paypal-payments-api, paypal-invoicing-api, paypal-web
 
 No sign-up is needed. All payments use the PayPal sandbox, so no real money moves.
 
-1. Open the live demo: `<LIVE_DEMO_URL — to be added>`.
+1. Open the live demo: https://chatcart-ai-alpha.vercel.app.
 2. In the customer chat type: `Hi! I'm Priya. I'd like a chocolate truffle cake and a box of 6 cupcakes for Saturday, no nuts.`
 3. When the agent shows the summary and total, reply `Yes, please confirm`.
 4. Click the PayPal button and log in with a PayPal **sandbox personal (buyer) account**. If you do not have one, create it at developer.paypal.com under Testing Tools > Sandbox Accounts. Approve the payment.
-5. Open `<LIVE_DEMO_URL>/dashboard`, enter owner PIN `246810`. The order shows as PAID.
+5. Open https://chatcart-ai-alpha.vercel.app/dashboard, enter owner PIN `246810`. The order shows as PAID.
 6. In the dashboard assistant type `What's pending today?`, then `Refund order CC-xxxx` (use your order code) and confirm when asked. The order becomes REFUNDED.
 7. Optional: `/new` creates your own shop from a pasted price list.
 
