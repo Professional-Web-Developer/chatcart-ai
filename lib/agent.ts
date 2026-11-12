@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { randomUUID } from 'node:crypto';
 import type { ChatMessage, Order, OrderStatus, Shop } from './types';
 import { formatUsd } from './menu';
-import { getModel } from './ai';
+import { getModel, generateTextWithFallback } from './ai';
 import * as db from './db';
 import { placeOrder, refundOrderByCode, markReadyByCode, markCollectedByCode, leaveReviewByCode, createCustomInvoice } from './orders';
 import { confirmationProblem } from './confirm';
@@ -87,7 +87,7 @@ export async function runCustomerAgent(messages: ChatMessage[], shop: Shop): Pro
   let quoted = false;
   let reviewed = false;
 
-  const result = await generateText({
+  const result = await generateTextWithFallback({
     model,
     instructions: customerSystem(shop),
     messages: toModelMessages(messages),
@@ -206,7 +206,7 @@ export async function runOwnerAgent(messages: ChatMessage[], shop: Shop): Promis
   let changed = false;
   let moneyActionDone = false;
 
-  const result = await generateText({
+  const result = await generateTextWithFallback({
     model,
     instructions: ownerSystem(shop),
     messages: toModelMessages(messages),

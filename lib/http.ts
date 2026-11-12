@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { isCapacityError } from './ai';
 import { z } from 'zod';
 import { AgentSetupError } from './agent';
 import { PayPalConfigError, PayPalError } from './paypal';
@@ -22,6 +23,7 @@ export function handleError(e: unknown) {
   if (e instanceof AgentSetupError || e instanceof PayPalConfigError) return fail(e.message, 503);
   if (e instanceof PayPalError) return fail(e.message, e.status === 404 ? 404 : 502);
   console.error('[api] unexpected error', e);
+  if (isCapacityError(e)) return fail('The AI assistant is very busy right now (free AI tier limit). Please try again in a few minutes.', 503);
   return fail('Something went wrong on our side. Please try again in a moment.', 500);
 }
 
