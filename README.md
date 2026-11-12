@@ -154,6 +154,7 @@ Set **one** of these in `.env.local` (detected in this order):
 | Provider | Variable | Default model |
 | --- | --- | --- |
 | Google Gemini | `GOOGLE_GENERATIVE_AI_API_KEY` | `gemini-flash-latest` |
+| Groq (free tier) | `GROQ_API_KEY` | `openai/gpt-oss-120b` |
 | Anthropic Claude | `ANTHROPIC_API_KEY` | `claude-haiku-5-5` |
 | OpenAI | `OPENAI_API_KEY` | `gpt-5.4-mini` |
 
@@ -191,7 +192,7 @@ The app is a standard Next.js project and deploys to Vercel or any Node host.
 | `PAYPAL_CLIENT_SECRET` | for payments | PayPal sandbox REST app secret (server only, never sent to the browser) |
 | `NEXT_PUBLIC_PAYPAL_CLIENT_ID` | for payments | Same client id, used by the PayPal buttons in the browser |
 | `PAYPAL_API_BASE` | no | Defaults to `https://api-m.sandbox.paypal.com` |
-| `GOOGLE_GENERATIVE_AI_API_KEY` / `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` | one of them, for AI | AI provider key, detected in this order |
+| `GOOGLE_GENERATIVE_AI_API_KEY` / `GROQ_API_KEY` / `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` | one of them, for AI | AI provider key, detected in this order |
 | `AI_MODEL` | no | Override the default model id |
 | `DATABASE_URL` | no | Postgres connection string. If empty, in-memory store |
 | `OWNER_PIN` | no | 6-digit PIN for the built-in demo shop. Defaults to `246810` |

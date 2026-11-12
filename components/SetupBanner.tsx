@@ -22,7 +22,7 @@ export function SetupBanner() {
 
   const missing: string[] = [];
   if (!health.paypal) missing.push("PayPal credentials (PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET) are not set, so checkout and refunds are unavailable.");
-  if (!health.ai) missing.push("No AI provider key is set (GOOGLE_GENERATIVE_AI_API_KEY, ANTHROPIC_API_KEY or OPENAI_API_KEY), so the chat agents cannot reply.");
+  if (!health.ai) missing.push("No AI provider key is set (GOOGLE_GENERATIVE_AI_API_KEY, GROQ_API_KEY, ANTHROPIC_API_KEY or OPENAI_API_KEY), so the chat agents cannot reply.");
 
   return (
     <div role="status" className="border-b border-amber-200 bg-amber-50">

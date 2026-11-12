@@ -12,6 +12,7 @@
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.102",
     "@ai-sdk/google": "^4.0.118",
+    "@ai-sdk/groq": "^4.0.81",
     "@ai-sdk/openai": "^4.0.115",
     "@paypal/react-paypal-js": "^10.6.1",
     "@types/qrcode": "^1.5.6",
