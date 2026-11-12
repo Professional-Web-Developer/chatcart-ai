@@ -62,15 +62,26 @@ Rules you must always follow:
 ${todayLine()}
 - Before calling create_order: summarise the cart (items, quantities, any notes, pickup date if given) and ask the customer to confirm. Only call create_order after the customer has clearly said yes to that summary in their latest message. Set customerConfirmed to true only in that case. If they change anything, re-summarise and ask again.
 - After create_order succeeds, tell the customer their order code and that they can pay securely with the PayPal button shown below the chat. Do not claim it is paid until they pay.
+- If the customer lost the chat or could not pay, ask for their order code and call get_order_status: for an unpaid order the PayPal button appears again so they can finish paying. Never create a second order for the same thing.
 - If the customer asks about an existing order, use get_order_status with its code and report payment and pickup-readiness exactly as the tool says.
 - You cannot give discounts, change prices, refund, cancel or mark orders; if asked, say the shop owner handles that.
 ${UNTRUSTED}
 - Be brief, warm and friendly: 1 to 3 short sentences unless listing the menu or a cart summary. Plain text, no markdown tables.`;
 }
 
+/**
+ * An unpaid menu order can be picked up again from any device with its code: the pay card is shown again.
+ * Codes are short, so the copy sent to the browser carries no name, notes or email.
+ */
+export function resumableOrder(o: Order): Order | undefined {
+  if (o.status !== 'PENDING_PAYMENT' || o.kind !== 'MENU') return undefined;
+  return { ...o, customerName: '', notes: undefined, customerEmail: undefined, lines: o.lines.map((l) => ({ ...l, notes: undefined })) };
+}
+
 export async function runCustomerAgent(messages: ChatMessage[], shop: Shop): Promise<{ reply: string; order?: Order }> {
   const model = requireModel();
   let created: Order | undefined;
+  let resumed: Order | undefined;
   let quoted = false;
 
   const result = await generateText({
@@ -118,7 +129,10 @@ export async function runCustomerAgent(messages: ChatMessage[], shop: Shop): Pro
         inputSchema: z.object({ shortCode: z.string() }),
         execute: async ({ shortCode }) => {
           const o = await db.getByShortCode(shortCode, shop.slug);
-          return o ? { ok: true, order: customerOrderView(o) } : { ok: false, error: `No order found with code ${shortCode}.` };
+          if (!o) return { ok: false, error: `No order found with code ${shortCode}.` };
+          const again = created ? undefined : resumableOrder(o);
+          if (again) resumed = again;
+          return { ok: true, order: customerOrderView(o), payButtonShown: Boolean(again), message: again ? 'This order is not paid yet. The PayPal button for it is shown again below the chat; tell the customer they can pay there.' : undefined };
         },
       }),
       request_custom_quote: tool({
@@ -148,7 +162,7 @@ export async function runCustomerAgent(messages: ChatMessage[], shop: Shop): Pro
   });
 
   const reply = result.text?.trim() || (created ? `Your order ${created.shortCode} is ready. Please pay with the PayPal button below.` : 'Sorry, I did not catch that. Could you say it again?');
-  return { reply, order: created };
+  return { reply, order: created ?? resumed };
 }
 
 function ownerSystem(shop: Shop) {
