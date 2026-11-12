@@ -39,6 +39,20 @@ export function PinGate({ slug, hint, onUnlock }: { slug: string; hint?: string;
   const [value, setValue] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Look the shop up so the gate shows its real name, and an unknown shop gets a not-found page.
+  const [shopName, setShopName] = useState<string | null>(null);
+  const [missing, setMissing] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    fetch(`/api/menu?shop=${encodeURIComponent(slug)}`)
+      .then(async (r) => {
+        if (r.status === 404) { await r.text().catch(() => ""); if (alive) setMissing(true); return null; }
+        return r.ok ? r.json() : null;
+      })
+      .then((d) => { if (alive && d?.shop?.name) setShopName(String(d.shop.name)); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [slug]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -63,6 +77,18 @@ export function PinGate({ slug, hint, onUnlock }: { slug: string; hint?: string;
     }
   }
 
+  if (missing) {
+    return (
+      <main className="mx-auto flex max-w-md flex-col px-4 py-12 text-center sm:py-20">
+        <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+          <h1 className="text-xl font-bold text-navy-900">We couldn&apos;t find that shop</h1>
+          <p className="mt-2 text-sm text-slate-600">Check the link, or create your own shop in a minute.</p>
+          <a href="/new" className="mt-5 inline-block rounded-xl bg-brand px-5 py-2.5 font-semibold text-white hover:bg-brand-dark">Create a shop</a>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="mx-auto flex max-w-md flex-col px-4 py-12 sm:py-20">
       <form onSubmit={submit} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
@@ -73,10 +99,11 @@ export function PinGate({ slug, hint, onUnlock }: { slug: string; hint?: string;
           </svg>
         </div>
         <h1 className="mt-4 text-xl font-bold text-navy-900">Owner dashboard</h1>
-        <p className="mt-1 text-sm text-slate-600">Enter the 6-digit owner PIN for <span className="font-mono text-xs">{slug}</span> to see orders and your assistant.</p>
+        <p className="mt-1 text-sm text-slate-600">Enter the 6-digit owner PIN for <span className="font-semibold text-navy-900">{shopName ?? "this shop"}</span> to see orders and your assistant.</p>
         <label htmlFor="pin" className="mt-5 block text-sm font-medium text-slate-700">Owner PIN</label>
         <input
           id="pin"
+          type="password"
           inputMode="numeric"
           autoComplete="off"
           maxLength={12}
