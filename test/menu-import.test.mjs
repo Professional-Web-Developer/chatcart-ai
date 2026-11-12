@@ -51,3 +51,15 @@ test('slugify', () => {
   assert.equal(slugify('!!!'), '');
   assert.ok(!slugify('a'.repeat(29) + ' b', 30).endsWith('-'));
 });
+
+test('filterUsdItems keeps USD/$/empty currency and reports the rest as skipped', async () => {
+  const { filterUsdItems } = await import('../lib/menu-import.ts');
+  const { kept, skipped } = filterUsdItems([
+    { name: 'A', price: 5, currency: 'USD' }, { name: 'B', price: 6, currency: '$' }, { name: 'C', price: 7, currency: '' },
+    { name: 'D', price: 8 }, { name: 'E', price: 450, currency: 'Rs' }, { name: ' F ', price: 350, currency: '₹' }, { name: 'G', price: 9, currency: ' usd ' },
+    { name: 'H', price: 1, currency: 'INR' },
+  ]);
+  assert.deepEqual(kept.map((i) => i.name), ['A', 'B', 'C', 'D', 'G']);
+  assert.deepEqual(skipped, ['E', 'F', 'H']);
+  assert.deepEqual(filterUsdItems([{ name: 'X', price: 1, currency: 'EUR' }]), { kept: [], skipped: ['X'] });
+});

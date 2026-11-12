@@ -44,3 +44,20 @@ export function cleanMenu(raw: RawItem[]): MenuItem[] {
   }
   return out;
 }
+
+const USD_MARKERS = new Set(['', 'USD', '$', 'US$']);
+
+/**
+ * Prices are stored in US dollars only. The model reports the currency each price was written in
+ * (empty or "USD"/"$" when it was written with $ or no marker); anything else is dropped, not converted.
+ */
+export function filterUsdItems<T extends RawItem & { currency?: unknown }>(raw: T[]): { kept: T[]; skipped: string[] } {
+  const kept: T[] = [];
+  const skipped: string[] = [];
+  for (const r of Array.isArray(raw) ? raw : []) {
+    const cur = String(r?.currency ?? '').trim().toUpperCase();
+    if (USD_MARKERS.has(cur)) kept.push(r);
+    else if (skipped.length < MAX_ITEMS) skipped.push(clip(r?.name, 80) || 'Unnamed item');
+  }
+  return { kept, skipped };
+}
