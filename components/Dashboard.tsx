@@ -11,10 +11,11 @@ import { ChatPanel } from "./ChatPanel";
 import { StatusBadge } from "./StatusBadge";
 import { money, shortDate, readError } from "./format";
 import { Logo } from "./Header";
+import { ReviewsPanel, useReviews } from "./Reviews";
 
 type Stats = { paidCount: number; pendingCount: number; refundedCount: number; revenue: number; invoicedCount?: number };
 
-const STARTERS = ["What's pending today?", "How much did I make?", "Refund order CC-…", "Mark CC-… as ready", "Send an invoice for the custom request"];
+const STARTERS = ["What's pending today?", "How much did I make?", "Refund order CC-…", "Mark CC-… as ready", "Mark CC-… as collected", "Send an invoice for the custom request"];
 
 function itemsSummary(o: Order) {
   return o.lines.map((l) => `${l.qty}× ${l.name}`).join(", ");
@@ -38,6 +39,10 @@ export function Dashboard({ slug, demo = false }: { slug: string; demo?: boolean
   if (!ready) return <div className="mx-auto max-w-7xl p-8 text-slate-500">Loading…</div>;
   if (!pin) return <PinGate slug={slug} hint={demo ? `Demo shop PIN: ${DEMO_PIN_HINT}` : undefined} onUnlock={setPin} />;
   return <DashboardInner slug={slug} pin={pin} onLock={() => setPin(null)} />;
+}
+
+function CollectedBadge() {
+  return <span className="ml-1.5 inline-flex items-center whitespace-nowrap rounded-full bg-teal-50 px-2.5 py-0.5 text-xs font-medium text-teal-800 ring-1 ring-inset ring-teal-200">Collected</span>;
 }
 
 function OrdersPanel({ title, orders, list, loadError }: { title: string; orders: Order[] | null; list: Order[]; loadError: string | null }) {
@@ -98,7 +103,7 @@ function OrdersPanel({ title, orders, list, loadError }: { title: string; orders
                         <td className="min-w-[11rem] max-w-[16rem] px-4 py-3 text-slate-600">{itemsSummary(o)}</td>
                         <td className="whitespace-nowrap px-4 py-3 font-medium tabular-nums text-slate-900">{money(o.total)}</td>
                         <td className="whitespace-nowrap px-4 py-3 text-slate-600">{shortDate(o.pickupDate)}</td>
-                        <td className="px-4 py-3"><StatusBadge order={o} /></td>
+                        <td className="px-4 py-3"><StatusBadge order={o} />{o.collectedAt && <CollectedBadge />}</td>
                         <td className="py-3 pl-4 pr-5 text-slate-500">{shortDate(o.createdAt)}</td>
                       </tr>
                     ))}
@@ -111,7 +116,7 @@ function OrdersPanel({ title, orders, list, loadError }: { title: string; orders
                   <li key={o.id} className="space-y-1.5 px-4 py-3.5">
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-mono text-xs font-semibold text-navy-900">{o.shortCode}</span>
-                      <StatusBadge order={o} />
+                      <span className="inline-flex flex-wrap items-center gap-1.5"><StatusBadge order={o} />{o.collectedAt && <CollectedBadge />}</span>
                     </div>
                     <p className="text-sm font-medium text-slate-900">{o.customerName} · {money(o.total)}</p>
                     <p className="text-sm text-slate-600">{itemsSummary(o)}</p>
@@ -152,12 +157,13 @@ function QuotesPanel({ quotes }: { quotes: QuoteRequest[] }) {
   );
 }
 
-type SectionId = "overview" | "orders" | "quotes" | "assistant" | "share";
+type SectionId = "overview" | "orders" | "quotes" | "reviews" | "assistant" | "share";
 
 const NAV: { id: SectionId; label: string; title: string; icon: ReactNode }[] = [
   { id: "overview", label: "Overview", title: "Overview", icon: <path d="M4 5h7v7H4V5Zm9 0h7v4h-7V5ZM4 14h7v5H4v-5Zm9-3h7v8h-7v-8Z" /> },
   { id: "orders", label: "Orders", title: "Orders", icon: <path d="M6 7h12l-1 12H7L6 7ZM9 7a3 3 0 0 1 6 0" /> },
   { id: "quotes", label: "Quote requests", title: "Quote requests", icon: <path d="M5 5h14v10H9l-4 4V5Zm4 4h6m-6 3h4" /> },
+  { id: "reviews", label: "Reviews", title: "Customer reviews", icon: <path d="M12 4l2.4 5 5.4.7-4 3.7 1 5.4L12 16.2 7.2 18.8l1-5.4-4-3.7 5.4-.7L12 4Z" /> },
   { id: "assistant", label: "Assistant", title: "Ask your assistant", icon: <path d="M12 3l1.8 4.6L18 9l-4.2 1.4L12 15l-1.8-4.6L6 9l4.2-1.4L12 3ZM18 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8.8-2Z" /> },
   { id: "share", label: "Share shop", title: "Share your shop", icon: <path d="M4 4h6v6H4V4Zm10 0h6v6h-6V4ZM4 14h6v6H4v-6Zm10 0h2v2h-2v-2Zm4 0h2v2h-2v-2Zm-4 4h2v2h-2v-2Zm4 0h2v2h-2v-2Z" /> },
 ];
@@ -286,6 +292,7 @@ function DashboardInner({ slug, pin, onLock }: { slug: string; pin: string; onLo
   const [loadError, setLoadError] = useState<string | null>(null);
   const [section, setSection] = useState<SectionId>("overview");
   const [drawer, setDrawer] = useState(false);
+  const reviews = useReviews(slug, 15000);
   const menuBtn = useRef<HTMLButtonElement>(null);
   const asideRef = useRef<HTMLElement>(null);
 
@@ -455,6 +462,8 @@ function DashboardInner({ slug, pin, onLock }: { slug: string; pin: string; onLo
           {section === "orders" && <OrdersPanel title="Orders" orders={orders} list={tableOrders} loadError={loadError} />}
 
           {section === "quotes" && <QuotesPanel quotes={quotes} />}
+
+          {section === "reviews" && <ReviewsPanel data={reviews} />}
 
           {section === "share" && <SharePanel path={storefront} />}
 

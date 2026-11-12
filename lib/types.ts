@@ -4,6 +4,8 @@ export type OrderStatus = 'PENDING_PAYMENT' | 'PAID' | 'REFUNDED' | 'CANCELLED' 
 export type Order = { id: string; shortCode: string; paypalOrderId: string; captureId?: string; status: OrderStatus;
   customerName: string; lines: OrderLine[]; total: number; currency: 'USD'; pickupDate?: string; notes?: string;
   createdAt: string; paidAt?: string; refundedAt?: string;
+  /** Set by the owner when the customer has picked the order up (PAID orders only). */
+  collectedAt?: string;
   // phase 2
   shopSlug: string; fulfilment: 'NEW' | 'READY'; readyAt?: string;
   kind: 'MENU' | 'CUSTOM'; invoiceId?: string; invoiceUrl?: string; customerEmail?: string };
@@ -12,3 +14,5 @@ export type Shop = { slug: string; name: string; tagline: string; items: MenuIte
 /** Customer request for something not on the menu; the owner can turn it into a PayPal invoice. */
 export type QuoteRequest = { id: string; shopSlug: string; customerName: string; customerEmail?: string; description: string;
   status: 'PENDING' | 'INVOICED'; orderShortCode?: string; createdAt: string };
+/** A verified review: one per paid order, left by the customer with the order code. */
+export type Review = { id: string; shopSlug: string; shortCode: string; rating: number; comment: string; customerFirstName: string; createdAt: string };

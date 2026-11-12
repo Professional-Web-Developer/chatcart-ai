@@ -25,6 +25,7 @@ All routes are Next.js route handlers under `app/api`. Back to the [README](../R
 | GET | `/api/health` | none | Which parts are configured |
 | GET | `/api/menu` | none | Shop name, tagline and menu |
 | GET | `/api/shops/<slug>` | none | Public shop info |
+| GET | `/api/reviews` | none | Rating summary and latest reviews |
 | POST | `/api/chat` | none | Customer agent |
 | POST | `/api/orders/capture` | none | Verify and capture a PayPal payment |
 | POST | `/api/owner/verify` | none (checks a PIN) | Check an owner PIN |
@@ -141,6 +142,10 @@ Orders are newest first, at most 500 with Postgres. `revenue` counts only `PAID`
 ## GET /api/quotes?shop=\<slug\>
 
 Owner auth. Response `200`: `{ "quotes": [ { "id", "shopSlug", "customerName", "customerEmail?", "description", "status": "PENDING" | "INVOICED", "orderShortCode?", "createdAt" } ] }`. Newest first, at most 200 with Postgres. Errors: `401`, `404`, `429`.
+
+## GET /api/reviews?shop=\<slug\>
+
+Public. Response `200`: `{ "stats": { "count", "average" }, "reviews": [ { "rating", "comment", "customerFirstName", "createdAt" } ] }`. The latest 5 reviews, newest first. `average` has one decimal and is `0` when there are no reviews. No order codes and no full names. Errors: `404`. `GET /api/menu` also returns `rating: { count, average }`.
 
 ## POST /api/owner-chat
 

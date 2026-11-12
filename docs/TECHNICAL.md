@@ -73,7 +73,7 @@ Defined in `lib/db.ts` (tables are created with `CREATE TABLE IF NOT EXISTS` on 
 | `currency` | TEXT | Always `USD`. |
 | `pickup_date` | TEXT | Date `YYYY-MM-DD` or the customer's own words. |
 | `notes` | TEXT | Up to 300 characters. |
-| `created_at`, `paid_at`, `refunded_at` | TIMESTAMPTZ | |
+| `created_at`, `paid_at`, `refunded_at`, `collected_at` | TIMESTAMPTZ | `collected_at` is set by `mark_collected` on `PAID` orders. |
 | `shop_slug` | TEXT | Default is the demo shop. Index on `(shop_slug, created_at DESC)`. |
 | `fulfilment` | TEXT | `NEW` or `READY`. |
 | `ready_at` | TIMESTAMPTZ | |
@@ -83,6 +83,8 @@ Defined in `lib/db.ts` (tables are created with `CREATE TABLE IF NOT EXISTS` on 
 **`shops`**: `slug` (primary key), `name`, `tagline`, `items` (JSONB menu), `pin_hash`, `created_at`. The demo shop "Anu's Home Bakery" is not stored. It comes from `lib/menu.ts`, and its PIN comes from `OWNER_PIN`.
 
 **`quotes`**: `id` (primary key), `shop_slug`, `customer_name`, `customer_email`, `description`, `status` (`PENDING` or `INVOICED`), `order_short_code`, `created_at`.
+
+**`reviews`**: `id` (primary key), `shop_slug`, `short_code`, `rating` (1 to 5), `comment` (max 500), `customer_first_name`, `created_at`. Unique on `(shop_slug, short_code)`, so an order has at most one review. The rules are pure functions in `lib/reviews.ts`.
 
 A menu item is `{ id, name, description, priceUsd, category, emoji }`. Lists are limited: 500 orders and 200 quotes per query with Postgres. The memory store keeps at most 5,000 orders.
 
@@ -97,6 +99,7 @@ Both agents get a system prompt with rules, and the tools below. The tool inputs
 | `get_menu` | none | Returns only the shop's own menu items. |
 | `create_order` | `customerName`, `items[]` (`itemId`, `qty` 1 to 50, optional `notes`), optional `pickupDate`, optional `notes`, `customerConfirmed` | Needs `customerConfirmed: true`. No price input exists. `priceCart` rejects unknown items, bad quantities, an empty cart and more than 20 different items, and computes totals in integer cents. A name is required. One order per request. `pickupDate` is resolved by `resolvePickup`. |
 | `get_order_status` | `shortCode` | Looks up only within the current shop. Returns a limited view (code, status, ready flag, item names, quantities, line totals, total, pickup day). No name, notes, email or invoice link. |
+| `leave_review` | `shortCode`, `rating` (integer 1 to 5), optional `comment` | The order must exist in this shop, be `PAID` and have no review yet (unique per order). The comment is trimmed, stripped of control characters and cut to 500. The name saved is the first word of the order's name, from the order, not from the chat. One per request. |
 | `request_custom_quote` | `customerName`, optional `customerEmail`, `description` (at least 5 characters) | Fields are clipped (name 80, email 200, description 1,000). One per request. `createQuoteOnce` skips a repeat of the same shop, name and description among `PENDING` quotes of the last 30 minutes. No price is stored. |
 
 ### Owner agent (`runOwnerAgent`)
@@ -107,6 +110,8 @@ Both agents get a system prompt with rules, and the tools below. The tool inputs
 | `sales_summary` | none | Counts and revenue from stored orders. |
 | `list_quote_requests` | none | `PENDING` quotes of the shop. |
 | `mark_ready` | `shortCode` | Only `PAID` orders. |
+| `mark_collected` | `shortCode` | Only `PAID` orders. Sets `collectedAt`; customers see `collected` in `get_order_status`. |
+| `list_reviews` | none | Latest 10 reviews of the shop with the average rating. |
 | `refund_order` | `shortCode`, `confirmed` | `confirmed` must be true, and `confirmationProblem` must pass (see below). One refund or invoice per request. Only `PAID` orders with a capture id. Full refund. |
 | `create_custom_invoice` | `customerName`, `customerEmail`, `description`, `amountUsd` ($1 to $5,000), optional `quoteId`, `confirmed` | Same confirmation checks, and the shown email and exact amount must appear in the previous assistant message. Valid email format. Amount from 100 to 500,000 cents. One refund or invoice per request. Marks the quote `INVOICED`. |
 
@@ -147,7 +152,7 @@ In the browser, `components/Storefront.tsx` and `components/OrderCard.tsx` use `
 
 ## Testing
 
-`npm test` runs 40 unit tests with the Node.js test runner (`test/*.test.mjs`). They use a fake PayPal server in `test/fake-paypal.mjs` and the in-memory store. They do **not** call PayPal or an AI model, and they do not test the agent prompts.
+`npm test` runs 51 unit tests with the Node.js test runner (`test/*.test.mjs`). They use a fake PayPal server in `test/fake-paypal.mjs` and the in-memory store. They do **not** call PayPal or an AI model, and they do not test the agent prompts.
 
 | File | What it covers |
 | --- | --- |
@@ -157,6 +162,7 @@ In the browser, `components/Storefront.tsx` and `components/OrderCard.tsx` use `
 | `menu-import.test.mjs` | Menu clean-up, limits, duplicates, slugs, USD-only filter |
 | `pickup.test.mjs` | Weekdays, relative days, Asia/Kolkata today, dates, unknown text |
 | `quotes.test.mjs` | Duplicate quote detection |
+| `reviews.test.mjs` | Review rules, rating, comment clean-up, first name, collected rule, average |
 
 ## Deployment (Vercel and Neon)
 

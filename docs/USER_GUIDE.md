@@ -56,6 +56,12 @@ sequenceDiagram
 1. In the chat write: `Where is my order CC-1234?`
 2. The agent looks up the code and tells you if it is paid and if it is ready for pickup. It does not show names, notes or emails.
 
+### Leave a review
+
+1. After you have received your order, tell the chat: `I collected my order`.
+2. The assistant asks for your order code, a rating from 1 to 5 and an optional comment, then saves the review.
+3. Only paid orders can be reviewed, and each order only once. The shop shows your first name, rating and comment, never your order code.
+
 ### Ask for a custom item
 
 1. Ask for something that is not on the menu. Example: `Can you make a 3 kg wedding cake?`
@@ -102,6 +108,7 @@ On a phone the sidebar opens with the menu button at the top left.
 - **Overview.** Four cards: Revenue (from paid orders), Paid, Pending, Refunded. If there are invoiced orders, the Pending card also says how many. Below are the five most recent orders. The page refreshes by itself every few seconds.
 - **Orders.** A table of all orders: code, customer, items, total, pickup, status and when it was placed. Statuses: Pending payment, Paid, Refunded, Invoiced. A paid order marked ready shows as ready for pickup.
 - **Quote requests.** Custom requests from customers that wait for a price. Each shows name, email (or a note that the email is missing), description and date. A number badge shows how many are waiting. To answer one, use the Assistant.
+- **Reviews.** The average rating, the number of reviews and the latest customer reviews. Customers leave reviews in the chat with their order code, so every review comes from a real paid order.
 - **Assistant.** A chat with your assistant. It has example buttons such as "What's pending today?" and "How much did I make?".
 - **Share shop.** Your shop link with a Copy button, and a QR code. See below.
 - **View storefront.** Opens the customer page of your shop.
@@ -117,6 +124,11 @@ On a phone the sidebar opens with the menu button at the top left.
 
 1. In the Assistant write: `Mark CC-1234 as ready`.
 2. Only paid orders can be marked ready. The customer can then see "ready for pickup" when they ask about the order.
+
+### Mark an order collected and see reviews
+
+1. In the Assistant write: `Mark CC-1234 as collected`. Only paid orders can be marked. The order then shows a "Collected" badge.
+2. Write `Show my reviews` for the latest 10 reviews and the average, or open **Reviews** in the sidebar.
 
 ### Refund an order
 

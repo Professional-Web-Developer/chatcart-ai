@@ -1,6 +1,7 @@
 import { randomInt } from 'node:crypto';
 import { Pool } from 'pg';
-import type { Order, OrderStatus, QuoteRequest, Shop } from './types';
+import type { Order, OrderStatus, QuoteRequest, Review, Shop } from './types';
+import { averageRating } from './reviews';
 import { DEFAULT_SHOP_SLUG, MENU, SHOP } from './menu';
 
 export type Stats = { paidCount: number; pendingCount: number; refundedCount: number; revenue: number; invoicedCount: number };
@@ -26,7 +27,14 @@ export interface OrderStore {
   createQuote(q: QuoteRequest): Promise<QuoteRequest>;
   listQuotes(shopSlug: string, status?: QuoteRequest['status']): Promise<QuoteRequest[]>;
   markQuoteInvoiced(id: string, shopSlug: string, orderShortCode: string): Promise<void>;
+  markCollected(id: string): Promise<Order | null>;
+  addReview(r: Review): Promise<{ ok: true; review: Review } | { ok: false; error: string }>;
+  listReviews(shopSlug: string, limit: number): Promise<Review[]>;
+  reviewStats(shopSlug: string): Promise<ReviewStats>;
 }
+
+export type ReviewStats = { count: number; average: number };
+const DUPLICATE_REVIEW = 'This order already has a review';
 
 export const dbKind = (): 'postgres' | 'memory' => (process.env.DATABASE_URL ? 'postgres' : 'memory');
 
@@ -52,13 +60,14 @@ function computeStats(orders: Order[]): Stats {
   };
 }
 
-const gm = globalThis as unknown as { __ccOrders?: Order[]; __ccShops?: ShopRecord[]; __ccQuotes?: QuoteRequest[]; __ccPool?: Pool; __ccReady?: Promise<void> };
+const gm = globalThis as unknown as { __ccOrders?: Order[]; __ccShops?: ShopRecord[]; __ccQuotes?: QuoteRequest[]; __ccReviews?: Review[]; __ccPool?: Pool; __ccReady?: Promise<void> };
 
 // ---------- in-memory ----------
 class MemoryStore implements OrderStore {
   private get arr(): Order[] { return (gm.__ccOrders ??= []); }
   private get shops(): ShopRecord[] { return (gm.__ccShops ??= []); }
   private get quotes(): QuoteRequest[] { return (gm.__ccQuotes ??= []); }
+  private get reviews(): Review[] { return (gm.__ccReviews ??= []); }
   async createOrder(o: Order) {
     for (let i = 0; this.arr.some((x) => x.shortCode === o.shortCode); i++) o.shortCode = newShortCode(i);
     if (this.arr.length >= MAX_MEMORY_ORDERS) this.arr.shift(); // bounded: the memory store is a demo fallback
@@ -89,6 +98,24 @@ class MemoryStore implements OrderStore {
     if (!o) return null;
     if (o.status === 'PAID' && o.fulfilment !== 'READY') { o.fulfilment = 'READY'; o.readyAt = new Date().toISOString(); }
     return o;
+  }
+  async markCollected(id: string) {
+    const o = this.arr.find((x) => x.id === id);
+    if (!o) return null;
+    if (o.status === 'PAID' && !o.collectedAt) o.collectedAt = new Date().toISOString();
+    return o;
+  }
+  async addReview(r: Review) {
+    if (this.reviews.some((x) => x.shopSlug === r.shopSlug && x.shortCode.toUpperCase() === r.shortCode.toUpperCase())) return { ok: false as const, error: DUPLICATE_REVIEW };
+    this.reviews.push(r);
+    return { ok: true as const, review: r };
+  }
+  async listReviews(shopSlug: string, limit: number) {
+    return this.reviews.filter((x) => x.shopSlug === shopSlug).sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, limit);
+  }
+  async reviewStats(shopSlug: string) {
+    const ratings = this.reviews.filter((x) => x.shopSlug === shopSlug).map((x) => x.rating);
+    return { count: ratings.length, average: averageRating(ratings) };
   }
   async listOrders(opts: { status?: OrderStatus; shopSlug?: string } = {}) {
     return this.arr.filter((o) => (!opts.status || o.status === opts.status) && (!opts.shopSlug || o.shopSlug === opts.shopSlug))
@@ -135,6 +162,10 @@ async function ready(): Promise<Pool> {
         `ALTER TABLE orders ADD COLUMN IF NOT EXISTS invoice_id TEXT`,
         `ALTER TABLE orders ADD COLUMN IF NOT EXISTS invoice_url TEXT`,
         `ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_email TEXT`,
+        `ALTER TABLE orders ADD COLUMN IF NOT EXISTS collected_at TIMESTAMPTZ`,
+        `CREATE TABLE IF NOT EXISTS reviews (id TEXT PRIMARY KEY, shop_slug TEXT NOT NULL, short_code TEXT NOT NULL,
+          rating INTEGER NOT NULL, comment TEXT NOT NULL DEFAULT '', customer_first_name TEXT NOT NULL DEFAULT '',
+          created_at TIMESTAMPTZ NOT NULL, UNIQUE (shop_slug, short_code))`,
         `CREATE INDEX IF NOT EXISTS orders_shop_idx ON orders (shop_slug, created_at DESC)`,
         `CREATE TABLE IF NOT EXISTS shops (slug TEXT PRIMARY KEY, name TEXT NOT NULL, tagline TEXT NOT NULL DEFAULT '',
           items JSONB NOT NULL, pin_hash TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL)`,
@@ -157,13 +188,18 @@ function rowToOrder(r: Row): Order {
     lines: r.lines, total: Number(r.total), currency: 'USD',
     pickupDate: r.pickup_date ?? undefined, notes: r.notes ?? undefined,
     createdAt: iso(r.created_at)!, paidAt: iso(r.paid_at), refundedAt: iso(r.refunded_at),
-    shopSlug: r.shop_slug, fulfilment: r.fulfilment, readyAt: iso(r.ready_at), kind: r.kind,
+    shopSlug: r.shop_slug, fulfilment: r.fulfilment, readyAt: iso(r.ready_at), collectedAt: iso(r.collected_at), kind: r.kind,
     invoiceId: r.invoice_id ?? undefined, invoiceUrl: r.invoice_url ?? undefined, customerEmail: r.customer_email ?? undefined,
   };
 }
 function rowToQuote(r: Row): QuoteRequest {
   return { id: r.id, shopSlug: r.shop_slug, customerName: r.customer_name, customerEmail: r.customer_email ?? undefined,
     description: r.description, status: r.status, orderShortCode: r.order_short_code ?? undefined, createdAt: iso(r.created_at)! };
+}
+
+function rowToReview(r: Row): Review {
+  return { id: r.id, shopSlug: r.shop_slug, shortCode: r.short_code, rating: Number(r.rating), comment: r.comment,
+    customerFirstName: r.customer_first_name, createdAt: iso(r.created_at)! };
 }
 
 class PgStore implements OrderStore {
@@ -211,6 +247,25 @@ class PgStore implements OrderStore {
   async markReady(id: string) {
     await (await ready()).query(`UPDATE orders SET fulfilment='READY', ready_at=now() WHERE id=$1 AND status='PAID' AND fulfilment<>'READY'`, [id]);
     return this.one('SELECT * FROM orders WHERE id=$1', [id]);
+  }
+  async markCollected(id: string) {
+    await (await ready()).query(`UPDATE orders SET collected_at=now() WHERE id=$1 AND status='PAID' AND collected_at IS NULL`, [id]);
+    return this.one('SELECT * FROM orders WHERE id=$1', [id]);
+  }
+  async addReview(r: Review) {
+    const res = await (await ready()).query(
+      `INSERT INTO reviews (id, shop_slug, short_code, rating, comment, customer_first_name, created_at) VALUES ($1,$2,UPPER($3),$4,$5,$6,$7)
+       ON CONFLICT (shop_slug, short_code) DO NOTHING RETURNING id`,
+      [r.id, r.shopSlug, r.shortCode, r.rating, r.comment, r.customerFirstName, r.createdAt]);
+    return res.rows[0] ? { ok: true as const, review: r } : { ok: false as const, error: DUPLICATE_REVIEW };
+  }
+  async listReviews(shopSlug: string, limit: number) {
+    const r = await (await ready()).query('SELECT * FROM reviews WHERE shop_slug=$1 ORDER BY created_at DESC LIMIT $2', [shopSlug, Math.max(1, Math.min(100, Math.floor(limit)))]);
+    return r.rows.map(rowToReview);
+  }
+  async reviewStats(shopSlug: string) {
+    const r = await (await ready()).query('SELECT count(*) AS n, COALESCE(ROUND(AVG(rating)::numeric, 1), 0) AS avg FROM reviews WHERE shop_slug=$1', [shopSlug]);
+    return { count: Number(r.rows[0].n), average: Number(r.rows[0].avg) };
   }
   async listOrders(opts: { status?: OrderStatus; shopSlug?: string } = {}) {
     const pool = await ready();
@@ -280,3 +335,7 @@ export const countShops = () => getStore().countShops();
 export const createQuote = (q: QuoteRequest) => getStore().createQuote(q);
 export const listQuotes = (shopSlug: string, status?: QuoteRequest['status']) => getStore().listQuotes(shopSlug, status);
 export const markQuoteInvoiced = (id: string, shopSlug: string, code: string) => getStore().markQuoteInvoiced(id, shopSlug, code);
+export const markCollected = (id: string) => getStore().markCollected(id);
+export const addReview = (r: Review) => getStore().addReview(r);
+export const listReviews = (shopSlug: string, limit: number) => getStore().listReviews(shopSlug, limit);
+export const reviewStats = (shopSlug: string) => getStore().reviewStats(shopSlug);

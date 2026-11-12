@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import type { Order, Shop } from './types';
+import type { Order, Review, Shop } from './types';
+import { cleanComment, collectProblem, ratingProblem, reviewProblem, reviewerFirstName } from './reviews';
 import { priceCart, toCents, type CartInput } from './menu';
 import * as db from './db';
 import * as paypal from './paypal';
@@ -119,4 +120,26 @@ export async function captureByPaypalOrderId(paypalOrderId: string): Promise<Cap
   }
   const updated = await db.markPaid(order.id, cap.id);
   return { ok: true, order: updated ?? order };
+}
+
+/** Owner marks a PAID order as picked up. Idempotent: an already collected order keeps its first timestamp. */
+export async function markCollectedByCode(shortCode: string, shopSlug: string): Promise<OrderResult> {
+  const order = await db.getByShortCode(shortCode, shopSlug);
+  if (!order) return { ok: false, error: `No order found with code ${shortCode}.` };
+  const problem = collectProblem(order);
+  if (problem) return { ok: false, error: problem };
+  return { ok: true, order: (await db.markCollected(order.id)) ?? order };
+}
+
+/** Verified review: the order must exist in this shop, be PAID and have no review yet. The name comes from the order, never from the caller. */
+export async function leaveReviewByCode(shopSlug: string, input: { shortCode: string; rating: number; comment?: string }): Promise<{ ok: true; review: Review } | { ok: false; error: string }> {
+  const order = await db.getByShortCode(input.shortCode, shopSlug);
+  const stars = ratingProblem(input.rating);
+  const problem = reviewProblem(order, shopSlug, false); // a duplicate is caught atomically by addReview (unique per order)
+  if (problem) return { ok: false, error: problem };
+  if (stars) return { ok: false, error: stars };
+  return db.addReview({
+    id: randomUUID(), shopSlug, shortCode: order!.shortCode, rating: input.rating,
+    comment: cleanComment(input.comment), customerFirstName: reviewerFirstName(order!.customerName), createdAt: new Date().toISOString(),
+  });
 }

@@ -38,6 +38,7 @@ Many small sellers, such as home bakers, tailors and snack makers, sell through 
 - **Custom requests.** For something not on the menu, the agent never invents a price. It records a quote request for the owner.
 - **Owner dashboard.** After a 6-digit PIN, the owner sees live orders and stats in a sidebar dashboard (Overview, Orders, Quote requests, Assistant, Share shop, View storefront, Sign out).
 - **Owner assistant.** The owner asks in plain language: pending orders, sales, mark an order ready, refund an order, send a PayPal invoice for a custom request. Refunds and invoices need a confirmation.
+- **Collection and reviews.** The owner marks a paid order as collected. After that, the customer can give the order code, a 1 to 5 rating and an optional comment in the chat. Only paid orders can be reviewed, once each. The storefront shows the average rating and the latest reviews (first names only), and the dashboard has a Reviews section.
 - **Create a shop.** A seller pastes a price list at `/new`. The AI turns it into a menu, and the app creates a storefront link, a dashboard and a random PIN that is shown once.
 
 See the [User guide](docs/USER_GUIDE.md) for each journey.

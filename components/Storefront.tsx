@@ -9,6 +9,7 @@ import { OrderCard } from "./OrderCard";
 import Link from "next/link";
 import { readError } from "./format";
 import type { OrderX } from "./types";
+import { WhatCustomersSay, reviewCountLabel, useReviews } from "./Reviews";
 
 const CLIENT_ID = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
 
@@ -48,6 +49,7 @@ export function Storefront({ slug }: { slug?: string }) {
   const [menu, setMenu] = useState<MenuState>({ status: "loading" });
   const [notFound, setNotFound] = useState(false);
   const chatBody = useMemo(() => (slug ? { shop: slug } : undefined), [slug]);
+  const reviews = useReviews(slug);
   const starters = useMemo(() => startersFor(menu.status === "ready" ? menu.items : []), [menu]);
 
   const fetchMenu = useCallback(() => {
@@ -94,11 +96,17 @@ export function Storefront({ slug }: { slug?: string }) {
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" aria-hidden="true" />
                 Powered by ChatCart AI
               </p>
+              {reviews && reviews.stats.count > 0 && (
+                <p className="mt-3 text-sm text-blue-100">
+                  <span className="text-amber-300" aria-hidden="true">★</span> <span className="font-semibold text-white">{reviews.stats.average.toFixed(1)}</span> · {reviewCountLabel(reviews.stats.count)}
+                </p>
+              )}
               {!slug && (
                 <p className="mt-3 text-sm"><Link href="/new" className="font-semibold text-blue-200 underline-offset-4 hover:underline">Sell something too? Create your own shop →</Link></p>
               )}
             </div>
             <MenuList menu={menu} onRetry={loadMenu} />
+            {reviews && <WhatCustomersSay reviews={reviews.reviews} />}
             {!slug && (
               <Link href="/new" className="block rounded-2xl border border-blue-200 bg-brand-soft p-5 transition hover:border-brand">
                 <p className="font-semibold text-navy-900">Create your own shop in a minute</p>
