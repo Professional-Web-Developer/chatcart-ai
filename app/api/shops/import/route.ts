@@ -18,14 +18,15 @@ const body = z.object({
 });
 
 // Loose on purpose: the strict checks happen in cleanMenu().
+// Every field is required: strict structured-output providers (e.g. Groq) reject optional properties.
 const extracted = z.object({
-  tagline: z.string().describe('A short friendly tagline for the shop, max 80 characters').optional(),
+  tagline: z.string().describe('A short friendly tagline for the shop, max 80 characters'),
   items: z.array(z.object({
     name: z.string(),
-    description: z.string().optional(),
+    description: z.string().describe('One short sentence, or an empty string if nothing is known'),
     price: z.number().describe('Price in US dollars as a plain number, e.g. 12.5'),
-    category: z.string().optional(),
-    emoji: z.string().optional().describe('One emoji that fits the item'),
+    category: z.string().describe('Short category name, e.g. Cakes, Stitching, Alterations'),
+    emoji: z.string().describe('One emoji that fits the item'),
   })),
 });
 
