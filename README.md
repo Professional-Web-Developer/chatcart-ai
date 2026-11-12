@@ -5,7 +5,7 @@
 Built for the PayPal AI Hackathon on Devpost.
 
 - Live demo: <https://chatcart-ai-alpha.vercel.app>
-- Demo video: `<DEMO_VIDEO_URL — to be added>`
+- Demo video: https://youtu.be/ixOMI0m0H_M
 - Repository: <https://github.com/Professional-Web-Developer/chatcart-ai>
 - Demo shop owner PIN: `246810`
 - Licence: [MIT](LICENSE)

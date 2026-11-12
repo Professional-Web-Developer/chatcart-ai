@@ -1,6 +1,6 @@
 # Devpost submission text (ready to paste)
 
-Replace the video placeholder before submitting. It is the only placeholder left.
+ It is the only placeholder left.
 
 ## Project name
 
@@ -73,7 +73,7 @@ paypal, nextjs, react, typescript, tailwindcss, vercel-ai-sdk, groq, postgresql,
 
 - Try it out: https://chatcart-ai-alpha.vercel.app
 - GitHub repository: https://github.com/Professional-Web-Developer/chatcart-ai (public, MIT licence)
-- Video demo: `<DEMO_VIDEO_URL — to be added>`
+- Video demo: https://youtu.be/ixOMI0m0H_M
 
 ## Testing instructions for judges (paste into "Testing instructions" field)
 
