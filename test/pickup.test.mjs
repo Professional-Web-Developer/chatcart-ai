@@ -56,3 +56,16 @@ test('past and far-future pickup dates are refused, valid ones pass', () => {
   assert.equal(pickupProblem('after Diwali', now), null);
   assert.equal(pickupProblem(undefined, now), null);
 });
+
+test('slash, dash and numeric date formats are resolved, then judged', () => {
+  assert.equal(resolvePickup('11/oct/2026', now), '2026-10-11');
+  assert.match(pickupProblem(resolvePickup('11/oct/2026', now), now), /in the past/);
+  assert.equal(resolvePickup('14-Nov-2026', now), '2026-11-14');
+  assert.equal(resolvePickup('14/11/2026', now), '2026-11-14');
+  assert.equal(resolvePickup('14.11.26', now), '2026-11-14');
+  assert.equal(resolvePickup('20/11', now), '2026-11-20');
+  assert.match(pickupProblem(resolvePickup('11/10/2026', now), now), /in the past/);
+  assert.match(pickupProblem(resolvePickup('32/13/2026', now), now), /could not be understood/);
+  assert.match(pickupProblem(resolvePickup('the 5th maybe', now), now), /could not be understood/);
+  assert.equal(pickupProblem(resolvePickup('next week', now), now), null);
+});

@@ -49,6 +49,15 @@ export function resolvePickup(text: string, now: Date = new Date()): string {
   const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (iso) return validDate(+iso[1], +iso[2], +iso[3]) ? s : original;
 
+  // Numeric day-first dates: 11/10/2026, 11-10-2026, 11.10.26, 11/10 (day/month, as written in India).
+  const num = s.match(/^(\d{1,2})[\/.\- ](\d{1,2})(?:[\/.\- ](\d{2}|\d{4}))?$/);
+  if (num) {
+    const d = +num[1], m = +num[2];
+    let y = num[3] ? (num[3].length === 2 ? 2000 + +num[3] : +num[3]) : t.y;
+    if (!num[3] && (m < t.m || (m === t.m && d < t.d))) y += 1;
+    return validDate(y, m, d) ? fmt(y, m, d) : original;
+  }
+
   const wd = s.match(/^(next )?([a-z]+)$/);
   if (wd && wd[2] in WEEKDAYS) {
     let delta = (WEEKDAYS[wd[2]] - wdToday + 7) % 7;
@@ -57,8 +66,9 @@ export function resolvePickup(text: string, now: Date = new Date()): string {
   }
 
   // "14 Nov", "14th November 2026", "Nov 14", "November 14, 2026"
-  const dm = s.match(/^(\d{1,2})(?:st|nd|rd|th)? (?:of )?([a-z]+),? ?(\d{4})?$/);
-  const md = s.match(/^([a-z]+) (\d{1,2})(?:st|nd|rd|th)?,? ?(\d{4})?$/);
+  const w = s.replace(/[\/.\-]+/g, ' ').replace(/\s+/g, ' ').trim();
+  const dm = w.match(/^(\d{1,2})(?:st|nd|rd|th)? (?:of )?([a-z]+),? ?(\d{4})?$/);
+  const md = w.match(/^([a-z]+) (\d{1,2})(?:st|nd|rd|th)?,? ?(\d{4})?$/);
   const parts = dm ? { d: +dm[1], mon: dm[2], y: dm[3] } : md ? { d: +md[2], mon: md[1], y: md[3] } : null;
   if (parts && parts.mon in MONTHS) {
     const m = MONTHS[parts.mon];
@@ -80,7 +90,8 @@ export const MAX_DAYS_AHEAD = 90;
 export function pickupProblem(resolved: string | undefined, now: Date = new Date()): string | null {
   if (!resolved) return null;
   const iso = resolved.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (!iso) return null;
+  // Text with digits that we could not turn into a date is refused rather than stored unchecked.
+  if (!iso) return /\d/.test(resolved) ? `The pickup date "${resolved}" could not be understood. Ask the customer to give it as a weekday or like "14 Nov".` : null;
   const t = todayIst(now);
   const today = fmt(t.y, t.m, t.d);
   if (resolved < today) return `The pickup date ${resolved} is in the past (today is ${today}). Ask the customer for a date from today onwards.`;
